@@ -113,3 +113,55 @@ def test_akis_bitince_acik_cumle_kesin_olur_ve_ara_metin_kapaliysa_yok():
     st = StreamTranscriber(lambda **k: None)
     st.run(ListSource(_frames([(1.2, True)])), FakeStreamingAsr(), events.append, interim=False)
     assert [e.text for e in events] == ["k0 k1"] and events[0].final
+
+
+def test_uzun_cumle_nefeste_kesilir_kelime_ortasinda_degil():
+    """12 sn sınırına varmadan, yumuşak sınırdan sonraki ilk kısa sessizlikte parça kesilir."""
+    import numpy as np
+    from viet_asr.application.stream import StreamTranscriber
+
+    SRr = 16000
+    sesli = np.full(SRr // 2, 0.3, np.float32)       # 0.5 sn yüksek ses
+    sessiz = np.zeros(SRr // 2, np.float32)          # 0.5 sn sessizlik
+    kareler = []
+    for _ in range(14):                              # ~7 sn konuşma + kısa aralar
+        kareler += [sesli[i:i + 320] for i in range(0, len(sesli), 320)]
+        kareler += [sessiz[i:i + 160] for i in range(0, 160 * 2, 160)]  # 0.02 sn: nefes değil
+    kareler += [sesli[i:i + 320] for i in range(0, len(sesli), 320)]
+    kareler += [sessiz[i:i + 320] for i in range(0, 320 * 20, 320)]      # 0.4 sn gerçek nefes
+    kareler += [sesli[i:i + 320] for i in range(0, len(sesli), 320)]
+
+    class Asr:
+        streaming = True
+        segmentation = "full"
+        max_utterance = 12.0
+        soft_utterance = 6.0
+        soft_pause = 0.25
+        name = "fake"
+
+        def open_stream(self):
+            class H:
+                n = 0
+                def accept(self, f): self.n += 1
+                def text(self): return "kelime" if self.n else ""
+                def is_endpoint(self): return False
+                def reset(self): self.n = 0
+                def finish(self): return "kelime"
+            return H()
+
+        def words_for(self, text, a, b):
+            return []
+
+    class Src:
+        def frames(self):
+            yield from kareler
+
+        def close(self):
+            pass
+
+    out = []
+    StreamTranscriber(lambda **k: None).run(Src(), Asr(), out.append, interim=False)
+    kesin = [x for x in out if x.final]
+    assert len(kesin) >= 2
+    # ilk parça zorla kesim sınırına (12 sn) varmadan, nefeste kesildi
+    assert kesin[0].end - kesin[0].start < 11.5

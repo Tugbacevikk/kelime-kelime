@@ -72,6 +72,9 @@ class SherpaStreamingTransducerAsr:
         self.params = params
         self.normalizer = normalizer
         self.max_utterance = float(os.environ.get("STREAM_MAX_UTTERANCE_SEC", "12"))
+        # Cümle bu süreyi aşınca kısa bir nefes payında (soft_pause sn) kesilir; zorla kesim (max) son çare
+        self.soft_utterance = float(os.environ.get("STREAM_SOFT_UTTERANCE_SEC", "6"))
+        self.soft_pause = float(os.environ.get("STREAM_SOFT_PAUSE_SEC", "0.25"))
         # cümle sonu: konuşmadan sonra bu kadar sessizlik (sn). 0,8 sn: kısa duraklamada bölmez.
         silence = float(os.environ.get("STREAM_ENDPOINT_SILENCE", "0.8"))
         self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(

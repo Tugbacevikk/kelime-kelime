@@ -75,6 +75,8 @@ class StreamStart(BaseModel):
     dil: str = Field("vi", max_length=8)
     codec: str = Field("auto", pattern="^(auto|pcmu|pcma|l16)$")
     clock_rate: int | None = Field(None, ge=8000, le=48000)
+    iki_asama: bool | None = None                             # None: sunucu ayarı (STREAM_TWO_STAGE); False: tek model (Whisper)
+    duzeltme: bool = True                                     # False: iki aşamalıda Whisper düzeltmesini kapat (yalnız hızlı model)
     son_analiz: bool = True                                   # bitince tam analiz (konuşmacı ayırma)
     num_speakers: int | None = Field(None, ge=1, le=20)
     callback_url: str | None = None

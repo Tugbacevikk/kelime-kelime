@@ -252,6 +252,8 @@ class StreamTranscriber:
 
         handle = asr.open_stream() if native else None
         last_text = ""
+        level = 0.0      # son konuşma seviyesi (yavaşça sönen en yüksek ses)
+        quiet_run = 0    # akışın sonundaki ardışık sessiz örnek sayısı
 
         def native_emit(final: bool, t_pop: float, t_in: float, text: str | None = None) -> None:
             """Akışlı modelin o ana kadarki metnini ara (final=False) ya da kesin parça olarak yayınlar."""
@@ -308,8 +310,16 @@ class StreamTranscriber:
                     buf.append(frame)
                 if native:
                     handle.accept(frame)
-                    if handle.is_endpoint() or total - buf_start > getattr(asr, "max_utterance", 12.0) * SR:
-                        native_emit(True, t_pop, t_in)   # cümle sonu ya da zorla kesim
+                    rms = float(np.sqrt(np.mean(frame * frame))) if len(frame) else 0.0
+                    level = max(level * 0.999, rms)
+                    quiet_run = quiet_run + len(frame) if rms < 0.15 * level else 0
+                    utt = total - buf_start
+                    soft = getattr(asr, "soft_utterance", 0.0)
+                    # uzun cümle: kısa bir nefeste kes (kelime ortasından zorla kesmemek için)
+                    soft_cut = soft > 0 and utt > soft * SR and quiet_run >= getattr(asr, "soft_pause", 0.25) * SR
+                    if handle.is_endpoint() or soft_cut or utt > getattr(asr, "max_utterance", 12.0) * SR:
+                        native_emit(True, t_pop, t_in)   # cümle sonu, nefes payı ya da zorla kesim
+                        quiet_run = 0
                     elif interim:
                         native_emit(False, t_pop, t_in)
                     continue

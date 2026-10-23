@@ -58,6 +58,7 @@ class StreamSpec:
     canli_url: str | None = None  # canlı parçalar buraya POST edilir (imzalı); callback_url bitişteki işe aittir
     sdp: str | None = None   # SDP metni (santralin verdiği); kaynak yerine ya da rtp:// ile birlikte
     iki_asama: bool | None = None  # True: hızlı model + arka plan Whisper düzeltmesi; None: STREAM_TWO_STAGE
+    duzeltme: bool = True    # False: iki aşamalıda yalnız hızlı model (Whisper düzeltmesi yok), ölçüm için
 
 
 def source_from_sdp(text: str, spec: StreamSpec, work_dir: Path | None = None):
@@ -408,11 +409,14 @@ class StreamManager:
                     two_stage = False
             if two_stage:
                 asr = fast_asr
-                with self._lock:
-                    if self.two_stage_max <= 0 or self._two_stage_active < self.two_stage_max:
-                        self._two_stage_active += 1
-                        slot = True
-                if slot:
+                if s.spec.duzeltme:
+                    with self._lock:
+                        if self.two_stage_max <= 0 or self._two_stage_active < self.two_stage_max:
+                            self._two_stage_active += 1
+                            slot = True
+                if not s.spec.duzeltme:
+                    refiner = None  # istek üzerine: yalnız hızlı model
+                elif slot:
                     refiner = self.engines[s.spec.dil]
                 else:  # kota dolu: Whisper düzeltmesi yok, yalnız hızlı model (CPU'yu boğmasın)
                     refiner, kota_doldu = None, True
