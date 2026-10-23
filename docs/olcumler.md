@@ -813,7 +813,7 @@ yavaş tüketicide 400/400 paket; eski kodda 12/400). Docker'da yeniden ölçül
 ### Canlı akışta Whisper medium: CPU / GPU / tek aşama (23 Ekim 2026)
 
 Antigravity ölçtü (commit ee66910, Docker'sız yerel sunucu, RTX 3050 Laptop 4 GB, Windows i5-11400H, RTP/PCMU 8 kHz, `diyalog_parca_01` 120,2 sn,
-medium beam 5, OMNI_BANDLIMIT_HZ=8000, her ayar için ısınma + 3 tekrar). Ortalamaları ve oranı ben yeniden hesapladım. **Metinler/WER henüz değerlendirilmedi** (n=1 kayıt).
+medium beam 5, OMNI_BANDLIMIT_HZ=8000, her ayar için ısınma + 3 tekrar). Ortalamaları ve oranı ben yeniden hesapladım. Metinlerin WER'i bir sonraki bölümde (n=1 kayıt).
 
 | Ayar | Anlık metin gecikmesi p50 / p95 | Medium çözme p50 / max (pencere başına) | Ses bittikten sonra son metin | GPU belleği | Ortalama CPU |
 |---|---|---|---|---|---|

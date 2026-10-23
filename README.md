@@ -1,3 +1,6 @@
+> **Bu depo**, `Vietnamese-speech-to-text-models` deposunun 23 Ekim 2026 (commit 2f305fd) kopyasıdır. Orası olduğu gibi kalır; burada canlı akış
+> için tek aşamalı Whisper medium (GPU) ve akışlı modeller (Nemotron 3.5, seda-v0.1) denenir. Ölçümler `docs/olcumler.md` içindedir.
+
 # Ses → Metin + Konuşmacı Ayrıştırma (Türkçe, Vietnamca)
 
 Türkçe ve Vietnamca ses kayıtlarını metne çevirir ve her cümlenin hangi konuşmacıya
