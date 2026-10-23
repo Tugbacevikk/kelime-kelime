@@ -148,11 +148,11 @@ class Settings:
     # sunucudaki bir dosya yolunu doğrudan kabul et (toplu iş için; yalnızca güvenilir ağda aç)
     allow_local_paths: bool = field(default_factory=lambda: os.environ.get(
         "ALLOW_LOCAL_PATHS", "0") == "1")
-    # iki aşamalı canlı akış: hızlı modelle (omnilingual-300m) anlık metin, medium ile arka planda düzeltme
+    # iki aşamalı canlı akış: hızlı modelle (seda-v0.1, akışlı) anlık metin, medium ile arka planda düzeltme
     stream_two_stage: bool = field(default_factory=lambda: os.environ.get(
         "STREAM_TWO_STAGE", "0").lower() in ("1", "true", "evet"))
     stream_fast_model: str = field(default_factory=lambda: os.environ.get(
-        "STREAM_FAST_MODEL", "omnilingual-300m"))
+        "STREAM_FAST_MODEL", "seda-v0.1"))
     stream_two_stage_max: int = field(default_factory=lambda: int(os.environ.get("STREAM_TWO_STAGE_MAX", "1")))
     # worker açılırken önceden yüklenecek diller (ilk işte gecikme olmasın)
     warmup: list[str] = field(default_factory=lambda: _list(os.environ.get("WARMUP_LANGS", "")))

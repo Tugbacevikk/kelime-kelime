@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 URL_SCHEMES = ("http", "https", "rtsp", "srt", "udp", "rtmp")
 # ara sonuç yalnızca hızlı motorlarda (Whisper ara çözümleri canlı akışı geride bırakır)
-FAST_ENGINES = ("zipformer", "omnilingual")
+FAST_ENGINES = ("zipformer", "omnilingual", "seda")
 
 
 class StreamError(ValueError):
@@ -272,7 +272,7 @@ class StreamManager:
             from viet_asr.infrastructure.sherpa_asr import build_asr
 
             threads = getattr(s, "threads", 2)
-            fast_model = getattr(s, "stream_fast_model", "omnilingual-300m")
+            fast_model = getattr(s, "stream_fast_model", "seda-v0.1")
             models_dir = getattr(s, "models_dir", "models")
             fast_engines = LazyAsrEngines({
                 "tr": lambda: build_asr(

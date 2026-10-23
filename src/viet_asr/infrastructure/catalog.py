@@ -56,6 +56,13 @@ ASR_PACKS: dict[str, Pack] = {
         {"model": "model.bin", "config": "config.json", "tokenizer": "tokenizer.json",
          "vocabulary": "vocabulary.txt"},
         hf_repo="Systran/faster-whisper-small"),
+    # Türkçe, gerçek akışlı Zipformer2 transducer (66M, Apache-2.0; LM dosyaları CC BY-SA, indirilmez).
+    # Yalnızca canlı akışın anlık metni için (STREAM_FAST_MODEL=seda-v0.1). 23 Ekim ölçümü: docs/olcumler.md.
+    "seda-v0.1": Pack(
+        "", "seda-v0.1", "Apache-2.0", "zipformer-streaming",
+        {"encoder": "encoder.int8.onnx", "decoder": "decoder.onnx", "joiner": "joiner.int8.onnx",
+         "tokens": "tokens.txt"},
+        hf_repo="atasoglu/seda-v0.1"),
     "omnilingual-300m": Pack(
         "asr-models/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12.tar.bz2",
         "sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12", "Apache-2.0",
@@ -111,7 +118,7 @@ AUX_PACKS: dict[str, Pack] = {
 DEFAULT_MODELS = {"vi": "zipformer-68m", "tr": "faster-whisper-medium"}
 MODEL_CHOICES = {"vi": ["zipformer-68m", "zipformer-30m", "faster-whisper-medium", "faster-whisper-small"],
                  "tr": ["faster-whisper-medium", "faster-whisper-small", "omnilingual-300m",
-                        "whisper-turbo"]}
+                        "whisper-turbo", "seda-v0.1"]}
 
 # Bellek tahmini (GB): (model ağırlığı — bir süreçte bir kez, iş başına çalışma belleği).
 # Ölçülen: Zipformer-68M 10 sn'lik gruplarla tüm süreç 0,46 GB (12 Ekim). Diğerleri model
@@ -121,6 +128,7 @@ MODEL_MEMORY_GB: dict[str, tuple[float, float]] = {
     "zipformer-68m": (0.2, 0.3),
     "zipformer-30m": (0.1, 0.3),
     "omnilingual-300m": (0.4, 0.5),
+    "seda-v0.1": (0.2, 0.2),  # ölçülmedi: model 79 MB, kartında ~170 MB RAM yazıyor
     "whisper-turbo": (0.9, 0.8),
     "faster-whisper-small": (0.3, 0.5),
     "faster-whisper-medium": (0.8, 1.0),

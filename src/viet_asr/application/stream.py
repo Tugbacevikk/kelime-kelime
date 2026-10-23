@@ -90,6 +90,7 @@ class StreamTranscriber:
             stop: threading.Event | None = None,
             refiner: AsrEngine | None = None,
             on_refine: Callable[[StreamSegment], None] | None = None) -> StreamSummary:
+        native = bool(getattr(asr, "streaming", False))  # gerçek akışlı model: ses geldikçe beslenir, VAD yok
         contiguous = getattr(asr, "segmentation", "vad") == "full"
         try:  # bitişik modda VAD'ın zorla kesmesi (kelime ortası) yerine en sessiz yerden keseriz
             vad = self.vad_factory(max_speech=self.max_chunk * 2) if contiguous else self.vad_factory()
@@ -249,6 +250,45 @@ class StreamTranscriber:
             buf, buf_start = ([a[n:]] if len(a) > n else []), cut
             return seg
 
+        handle = asr.open_stream() if native else None
+        last_text = ""
+
+        def native_emit(final: bool, t_pop: float, t_in: float, text: str | None = None) -> None:
+            """Akışlı modelin o ana kadarki metnini ara (final=False) ya da kesin parça olarak yayınlar."""
+            nonlocal index, last_text
+            text = (handle.text() if text is None else text).strip()
+            end_sample = total
+            if not final:
+                if text and text != last_text and buf:
+                    last_text = text
+                    seg = VadSegment(start=buf_start / SR, samples=np.concatenate(buf))
+                    words = asr.words_for(text, seg.start, seg.end)
+                    on_segment(_segment(index, seg, words, False, max(0.0, time.monotonic() - t_pop),
+                                        self.low_conf))
+                return
+            seg = take(end_sample)
+            last_text = ""
+            handle.reset()
+            if seg is None or not text:
+                return  # konuşma çözülmedi (sessizlik/gürültü): parça yok
+            words = asr.words_for(text, seg.start, seg.end)
+            t_now = time.monotonic()
+            latency, queue_wait, total_latency = max(0.0, t_now - t_pop), max(0.0, t_pop - t_in), max(0.0, t_now - t_in)
+            out = _segment(index, seg, words, True, latency, self.low_conf,
+                           queue_wait=queue_wait, total_latency=total_latency)
+            index += 1
+            summary.segments += 1
+            summary.words += len(words)
+            summary.latencies.append(latency)
+            summary.max_latency = max(summary.max_latency, latency)
+            summary.kuyruk_beklemeler.append(queue_wait)
+            summary.max_kuyruk_bekleme = max(summary.max_kuyruk_bekleme, queue_wait)
+            summary.toplam_gecikmeler.append(total_latency)
+            summary.max_toplam_gecikme = max(summary.max_toplam_gecikme, total_latency)
+            if refine_q is not None and len(seg.samples):
+                refine_q.put((out, seg, t_in))
+            on_segment(out)
+
         try:
             for frame in source.frames():
                 if stop is not None and stop.is_set():
@@ -266,6 +306,13 @@ class StreamTranscriber:
                     del arrived[:2048]
                 if contiguous:
                     buf.append(frame)
+                if native:
+                    handle.accept(frame)
+                    if handle.is_endpoint() or total - buf_start > getattr(asr, "max_utterance", 12.0) * SR:
+                        native_emit(True, t_pop, t_in)   # cümle sonu ya da zorla kesim
+                    elif interim:
+                        native_emit(False, t_pop, t_in)
+                    continue
                 for seg in vad.feed(frame):
                     if contiguous:
                         cut = min(total, int(round(seg.end * SR)))
@@ -286,8 +333,14 @@ class StreamTranscriber:
                     if cur is not None and cur.end - cur.start >= self.min_interim:
                         emit(cur, False)
                     last_interim = total / SR
-            tail = vad.flush()
-            if contiguous:
+            if native:
+                native_emit(True, time.monotonic(), time.monotonic(), text=handle.finish())
+                tail = []
+            else:
+                tail = vad.flush()
+            if native:
+                pass
+            elif contiguous:
                 seg = take(total)
                 if seg is not None and seg.end - seg.start >= 0.3:
                     emit(seg, True)

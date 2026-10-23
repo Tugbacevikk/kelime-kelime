@@ -14,7 +14,7 @@ class ModelRef:
     """Bir model paketinin dosyaları.
 
     kind: altyapıda hangi adaptörün kullanılacağı
-          ("zipformer-transducer", "whisper", "omnilingual-ctc")
+          ("zipformer-transducer", "zipformer-streaming", "whisper", "omnilingual-ctc")
     files: rol -> dosya adı (klasöre göre), ör. {"encoder": "encoder.int8.onnx"}
     """
 

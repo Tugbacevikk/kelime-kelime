@@ -3,6 +3,11 @@
 
 # Ses → Metin + Konuşmacı Ayrıştırma (Türkçe, Vietnamca)
 
+> **Canlı akış (Türkçe), bu depoda:** anlık metin artık gerçek akışlı **seda-v0.1** modelinden (CPU, ses geldikçe kelime);
+> Whisper medium arka planda düzeltir (`.env`: `STREAM_FAST_MODEL=seda-v0.1`). İndirme: `python scripts/download_models.py --hizli seda-v0.1`
+> (`baslat.bat` bunu kendisi yapar). Bu yol gerçek modelle **henüz uçtan uca denenmedi**; yalnızca sahte modelli testler var.
+> Eski yol için `STREAM_FAST_MODEL=omnilingual-300m`. Ölçümler: [docs/olcumler.md](docs/olcumler.md).
+
 Türkçe ve Vietnamca ses kayıtlarını metne çevirir ve her cümlenin hangi konuşmacıya
 ait olduğunu bulur. Dil istekte seçilir (`tr`, `vi`) ya da sesten bulunur; konuşmacı sayısı
 istekte verilmezse sesten bulunur. Yalnızca CPU'da, internetsiz sunucuda çalışacak şekilde

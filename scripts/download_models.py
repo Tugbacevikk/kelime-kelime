@@ -4,6 +4,7 @@
     python scripts/download_models.py --vi zipformer-30m --tr omnilingual-300m
     python scripts/download_models.py --vi all --tr all        # tüm adaylar (karşılaştırma için)
     python scripts/download_models.py --tr none                # yalnızca Vietnamca
+    python scripts/download_models.py --hizli seda-v0.1        # canlı akışın anlık modeli (Türkçe, akışlı)
 
 Her zaman inenler: Silero VAD, pyannote segmentation, WeSpeaker, Whisper-tiny ve -small (dil tespiti).
 İnternetsiz (air-gapped) sunucu için: bunu internetli makinede çalıştırıp models/
@@ -100,17 +101,34 @@ def _env_model(lang: str) -> str:
     return DEFAULT_MODELS[lang] if not v or is_folder_model(v) else v
 
 
+def _env_fast() -> str:
+    """Canlı akışta iki aşamalı mod açıksa (.env: STREAM_TWO_STAGE=1) anlık model STREAM_FAST_MODEL; değilse yok."""
+    import os
+
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
+    if os.environ.get("STREAM_TWO_STAGE", "0").lower() not in ("1", "true", "evet"):
+        return "none"
+    return os.environ.get("STREAM_FAST_MODEL", "omnilingual-300m")
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--vi", choices=[*MODEL_CHOICES["vi"], "all", "none"], default=_env_model("vi"))
     p.add_argument("--tr", choices=[*MODEL_CHOICES["tr"], "all", "none"], default=_env_model("tr"))
+    p.add_argument("--hizli", choices=[*MODEL_CHOICES["tr"], "none"], default=_env_fast(),
+                   help="canlı akışın anlık modeli (Türkçe): seda-v0.1 gibi; .env'deki STREAM_FAST_MODEL varsayılan")
     p.add_argument("--dest", default="models")
     a = p.parse_args()
     dest = Path(a.dest)
     dest.mkdir(exist_ok=True)
 
     packs = dict(AUX_PACKS)
-    for key in choose(a.vi, "vi") + choose(a.tr, "tr"):
+    for key in choose(a.vi, "vi") + choose(a.tr, "tr") + choose(a.hizli, "tr"):
         packs[key] = ASR_PACKS[key]
 
     mpath = dest / "MANIFEST.json"
