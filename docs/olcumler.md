@@ -846,3 +846,26 @@ A = CPU int8, iki aşamalı; B = GPU fp16, iki aşamalı; C = GPU fp16, tek aşa
 - "yüz yüze" üç ayarda da "100 100" / "100" çıkıyor.
 - "Ses bittikten sonra" ve gecikme değerleri parça kapandıktan sonraki bekleyiştir; kelimenin söylendiği andan ekrana gelişi değil (parça 5–8 sn ses biriktiriyor; ilk parça C'de bile 5,89 sn).
 - Sınır: tek kayıt, tek konuşmacı çifti; Docker'da GPU kurulu değil, bu koşular Docker'da yapılmadı.
+
+### Akışlı model adayları, Faz 1 (23 Ekim 2026)
+
+Antigravity ölçtü (RTX 3050 Laptop 4 GB, Windows, sherpa-onnx 1.13.8 yalnızca CPU derlemesi, onnxruntime-gpu 1.20, ctranslate2 4.8.3);
+WER'i ben metinlerden yeniden hesapladım (referans: kullanıcının insan metni, 187 kelime). Ses: `diyalog_parca_01` telefon bandı (8 kHz PCMU, sonra 16 kHz), 120,2 sn, dosyayı gerçek zamanlı akış gibi besleme, 2 tekrar.
+
+| Model | Cihaz | Parça | Süre/ses | Parça işleme p50 / max | Kelime gecikmesi (alt sınır) | WER | Kelime |
+|---|---|---|---|---|---|---|---|
+| seda-v0.1 (Zipformer2 transducer, akışlı) | CPU 4 iş p. | 0,64 sn | 0,038 | 0,023 / 0,063 sn | 0,66 sn | **%22,5** | 173 |
+| Nemotron 3.5 0.6B, sherpa-onnx 560 ms (topluluk paketi) | CPU 4 iş p. | 0,56 sn | 0,268 | 0,148 / 0,236 sn | 0,56 sn | %71,7 | 121 |
+| Nemotron 3.5, topluluk ONNX fp16 320 ms | CPU | 0,32 sn | 6,99 | 2,21 / 3,41 sn | 111 sn (kuyruk birikti) | ölçülmedi | — |
+| Nemotron 3.5, ONNX, GPU | GPU | — | — | — | — | çalışmadı | — |
+| omnilingual-300m (1,5 sn'de bir büyüyen tamponu çözme) | CPU 4 iş p. | 1,5 sn | 0,80 | 1,20 / 1,55 sn | 1,5 sn | %24,6 | 165 |
+| Whisper medium, akışsız (referans) | GPU fp16 | tek geçiş | 0,065 | — | — | %16,0 | 173 |
+
+- **seda-v0.1** gerçek zamanın ~26 katı hızında, yalnızca CPU'da; ara metin geri alma (rollback) 0; "yüz yüze" doğru yazıldı (Whisper "100-100" yazıyor). Konuşmada olmayan kelime uydurmadı. Çıktı küçük harf, noktalamasız.
+- **Nemotron 560 ms (sherpa-onnx)**: metin bozuk (ilk ~7 sn konuşma hiç yazılmamış, kelimeler sesbilgisel parçalanmış). Bu, modelin kötü olduğunu değil, bu kurulumun (topluluk paketi, dil ayarı `tr`/prompt 18) çalışmadığını gösterir; neden araştırılmadı.
+- **Nemotron GPU**: cuDNN `/Conv_5` hatası (`GRAPH_EXECUTION_PLAN_CREATION_FAILED`), yedek yolda fp16 taşması (token 0 tekrarı), tek akış 3955 MiB. 4 GB kartta pratik değil.
+- **Nemotron 320 ms CPU**: fp16 ağırlıkla çalıştırılmış; topluluk sayfası fp32'de CPU'da 0,26 diyor. fp32 denenmedi, "yazılımsal emülasyon" açıklaması doğrulanmadı.
+- omnilingual bu denemede projedeki yoldan farklı çalıştı (büyüyen tamponun tamamı yeniden çözülüyor, 18 geri alma); canlı akıştaki anlık metin WER'i (%42,3) ile doğrudan karşılaştırılamaz. Aradaki fark parça kesme yolundan olabilir, araştırılmadı.
+- Gecikme değerleri "kelimenin göründüğü parçanın bitişi" üzerinden hesaplandı; kelimenin söylendiği andan ekrana gelişi değil, alt sınırdır. "Ses bitişi gecikmesi 0,0000 sn" ölçüm değil, kurulum sonucudur (parça işleme süresi sıfır olamaz).
+- Raporda CPU "12 çekirdekli i7" yazıyor; doğrusu i5-11400H (6 çekirdek / 12 iş parçacığı).
+- Sınır: n=1 kayıt, tek konuşmacı çifti, dosya beslemesi (ağ/RTP yok). WER yalnızca bu kayıtta; seda'nın eğitim verisi okunmuş konuşma (Common Voice, ISSAI).
